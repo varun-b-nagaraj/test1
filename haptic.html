@@ -3,362 +3,497 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Xbox Haptics — Sine Wave + Reliable Controls</title>
+<title>Xbox Haptics</title>
 <style>
-  :root{--bg:#0f1220;--text:#e8ebff;--muted:#9aa3c7;--accent:#7c9cff;--ok:#2bd576;--danger:#ff5d73;--radius:16px}
-  *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
-  body{margin:0;background:radial-gradient(1000px 500px at 10% -20%, #1b1f3b 0%, #0f1220 60%), var(--bg);color:var(--text)}
-  .shell{max-width:760px;margin:0 auto;padding:22px}
-  h1{margin:6px 0 0;font-size:clamp(20px,4vw,28px)}
-  .sub{color:var(--muted);margin:6px 0 16px;font-size:14px}
-  .card{background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-        border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:16px}
-  .status{display:flex;align-items:center;gap:10px;margin:8px 0 16px}
-  .dot{width:10px;height:10px;border-radius:50%;background:#777}
-  .dot.ok{background:var(--ok)} .dot.bad{background:var(--danger)}
-  .row{display:grid;grid-template-columns: 120px 1fr 120px;gap:10px;align-items:center;margin:10px 0}
-  label{color:var(--muted);font-size:14px}
-  output{text-align:right;font-variant-numeric:tabular-nums}
-  input[type="range"]{width:100%;appearance:none;height:12px;border-radius:999px;background:#1a1e3a}
-  input[type="range"]::-webkit-slider-thumb{
-    appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;border:3px solid var(--accent);
-    box-shadow:0 2px 10px rgba(0,0,0,.35)
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
   }
-  .btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-  button{padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:var(--accent);color:#0b1025;font-weight:700}
-  button.secondary{background:#0f1534;color:#e8ebff}
-  button.danger{background:var(--danger);color:#fff}
-  .tips{color:var(--muted);font-size:13px;line-height:1.5;margin-top:8px}
-  .kbd{padding:1px 6px;border-radius:6px;background:#0b0f22;border:1px solid rgba(255,255,255,.12)}
-  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+  
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #fafafa;
+    color: #333;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  
+  .container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 40px;
+    width: 500px;
+    max-width: 90vw;
+  }
+  
+  .title {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 30px;
+    color: #222;
+  }
+  
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 30px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+  }
+  
+  .status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ddd;
+    transition: all 0.3s ease;
+  }
+  
+  .status-dot.connected { background: #28a745; }
+  .status-dot.no-haptics { background: #ffc107; }
+  
+  .status-text {
+    font-size: 14px;
+    color: #666;
+  }
+  
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 30px;
+  }
+  
+  .control {
+    text-align: center;
+  }
+  
+  .control-label {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  
+  .control-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 4px;
+  }
+  
+  .control-unit {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 16px;
+  }
+  
+  .control-hint {
+    font-size: 11px;
+    color: #999;
+    padding: 4px 8px;
+    background: #f1f3f4;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  
+  .buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  
+  .btn {
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+  
+  .btn:hover {
+    background: #f8f9fa;
+    border-color: #ccc;
+  }
+  
+  .btn:active {
+    transform: scale(0.98);
+  }
+  
+  .btn-primary {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+  }
+  
+  .btn-primary:hover {
+    background: #0056b3;
+    border-color: #0056b3;
+  }
+  
+  .btn-danger {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+  }
+  
+  .btn-danger:hover {
+    background: #c82333;
+    border-color: #c82333;
+  }
+  
+  .instructions {
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+    line-height: 1.4;
+  }
+  
+  .key {
+    background: #f1f3f4;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    font-size: 11px;
+  }
+  
+  .running {
+    border: 2px solid #28a745;
+  }
+  
+  .debug {
+    margin-top: 16px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 11px;
+    color: #666;
+    text-align: center;
+  }
 </style>
 </head>
 <body>
-<div class="shell">
-  <h1>Xbox Haptics — Sine Wave + Reliable Controls</h1>
-  <div class="sub">
-    <b>B</b> toggles start/stop. Hold <b>D-pad ↑/Y</b> = faster, <b>D-pad ↓/A</b> = slower, <b>D-pad →/←</b> = intensity ±.  
-    (Keyboard: ↑/↓ speed, ←/→ intensity, Space toggle)
+<div class="container" id="container">
+  <h1 class="title">Xbox Haptics</h1>
+  
+  <div class="status">
+    <div class="status-dot" id="statusDot"></div>
+    <div class="status-text" id="statusText">Connect controller and press any button</div>
   </div>
-
-  <div class="card">
-    <div class="status">
-      <span id="dot" class="dot"></span>
-      <div>
-        <div id="gpName">No controller detected.</div>
-        <div id="cap" class="sub">Pair your controller, press any button, then press <b>B</b> or click Start.</div>
-      </div>
+  
+  <div class="controls">
+    <div class="control">
+      <div class="control-label">Intensity</div>
+      <div class="control-value" id="intensityValue">60</div>
+      <div class="control-unit">percent</div>
+      <div class="control-hint">D-pad ↑↓</div>
     </div>
-
-    <div class="row">
-      <label for="intensity">Intensity</label>
-      <input id="intensity" type="range" min="0" max="100" value="60"/>
-      <output><span id="intensityPct">60</span>%</output>
+    
+    <div class="control">
+      <div class="control-label">Frequency</div>
+      <div class="control-value" id="frequencyValue">3.2</div>
+      <div class="control-unit" id="frequencyUnit">Hz</div>
+      <div class="control-hint">D-pad ←→</div>
     </div>
-
-    <div class="row">
-      <label for="speed">Speed</label>
-      <!-- 0..101 where 101 = ∞ (constant on) -->
-      <input id="speed" type="range" min="0" max="101" step="1" value="25"/>
-      <output><span id="speedHz">3.2</span> Hz • <span id="periodMs">312.5</span> ms</output>
-    </div>
-
-    <div class="btns">
-      <button id="detect" class="secondary">Detect</button>
-      <button id="start">Start</button>
-      <button id="pulse" class="secondary">Pulse</button>
-      <button id="stop" class="danger">Stop</button>
-    </div>
-
-    <div class="tips">
-      Uses **sine amplitude modulation** for smooth feel (no square pulses). Top speed shows <b>∞</b> → motors held ON.  
-      If buttons don’t register immediately, press any gamepad button once (browser quirk).
-    </div>
-
-    <div class="tips mono" id="dbg" style="opacity:.8"></div>
   </div>
+  
+  <div class="buttons">
+    <button class="btn" id="detectBtn">Detect</button>
+    <button class="btn btn-primary" id="startBtn">Start</button>
+    <button class="btn btn-danger" id="stopBtn">Stop</button>
+  </div>
+  
+  <div class="instructions">
+    Press <span class="key">B</span> to toggle • 
+    <span class="key">D-pad ↑↓</span> intensity • 
+    <span class="key">D-pad ←→</span> frequency
+  </div>
+  
+  <div class="debug" id="debug">Ready</div>
 </div>
 
 <script>
 (() => {
-  // ---------- Elements ----------
-  const $ = id => document.getElementById(id);
-  const ui = {
-    detect: $('detect'), start: $('start'), stop: $('stop'), pulse: $('pulse'),
-    gpName: $('gpName'), cap: $('cap'), dot: $('dot'),
-    intensity: $('intensity'), intensityPct: $('intensityPct'),
-    speed: $('speed'), speedHz: $('speedHz'), periodMs: $('periodMs'),
-    dbg: $('dbg')
+  const elements = {
+    container: document.getElementById('container'),
+    statusDot: document.getElementById('statusDot'),
+    statusText: document.getElementById('statusText'),
+    intensityValue: document.getElementById('intensityValue'),
+    frequencyValue: document.getElementById('frequencyValue'),
+    frequencyUnit: document.getElementById('frequencyUnit'),
+    detectBtn: document.getElementById('detectBtn'),
+    startBtn: document.getElementById('startBtn'),
+    stopBtn: document.getElementById('stopBtn'),
+    debug: document.getElementById('debug')
   };
 
-  // ---------- State ----------
-  const S = {
-    idx: null,
-    running: false,
-    rafId: null,
-    inputTimer: null,
-    lastButtons: [],
-    // params
-    intensity: 0.60,   // 0..1
-    speedPos: 25,      // 0..101 (101 => Infinity)
-    // timing
-    lastSend: 0,       // ms timestamp of last haptics command
-    sendEveryMs: 18,   // how often to refresh actuator (overlapping durations)
-    // keyboard fallback
-    keys: new Set()
+  const state = {
+    controllerIndex: null,
+    isRunning: false,
+    animationId: null,
+    intensity: 60, // 0-100
+    frequency: 25, // 0-101 position
+    lastButtons: null,
+    lastInputTime: 0
   };
 
-  // ---------- Speed mapping (exponential-ish) ----------
-  const PMAX = 101, FMAX = 200; // 200 Hz cap; 101 => Infinity
-  function posToHz(p){
-    if (p >= PMAX) return Infinity;
-    const s = p / PMAX;
-    return FMAX * (1 - Math.pow(1 - s, 3)); // concave curve → finer at high end
-  }
-  function hzToPos(hz){
-    if (!isFinite(hz) || hz >= FMAX) return PMAX;
-    const s = 1 - Math.pow(1 - (hz / FMAX), 1/3);
-    return Math.round(s * PMAX);
+  // Frequency conversion
+  function posToHz(pos) {
+    if (pos >= 101) return Infinity;
+    const norm = pos / 101;
+    return 200 * (1 - Math.pow(1 - norm, 3));
   }
 
-  // ---------- Gamepad helpers ----------
-  function pads(){ return navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : []; }
-  const haveHaptics = gp => gp?.vibrationActuator && typeof gp.vibrationActuator.playEffect === 'function';
+  function getGamepads() {
+    return navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+  }
 
-  function findPad(){
-    const P = pads();
-    // prefer standard mapping with haptics
-    for (let i=0;i<P.length;i++){ if (P[i]?.connected && P[i].mapping==='standard' && haveHaptics(P[i])) return {gp:P[i], index:i, haptics:true}; }
-    // any haptics
-    for (let i=0;i<P.length;i++){ if (P[i]?.connected && haveHaptics(P[i])) return {gp:P[i], index:i, haptics:true}; }
-    // any connected
-    for (let i=0;i<P.length;i++){ if (P[i]?.connected) return {gp:P[i], index:i, haptics:false}; }
+  function hasHaptics(gp) {
+    return gp?.vibrationActuator && typeof gp.vibrationActuator.playEffect === 'function';
+  }
+
+  function findController() {
+    const pads = getGamepads();
+    for (let i = 0; i < pads.length; i++) {
+      const gp = pads[i];
+      if (gp?.connected && gp.mapping === 'standard' && hasHaptics(gp)) {
+        return { gamepad: gp, index: i, hasHaptics: true };
+      }
+    }
+    for (let i = 0; i < pads.length; i++) {
+      const gp = pads[i];
+      if (gp?.connected && hasHaptics(gp)) {
+        return { gamepad: gp, index: i, hasHaptics: true };
+      }
+    }
+    for (let i = 0; i < pads.length; i++) {
+      const gp = pads[i];
+      if (gp?.connected) {
+        return { gamepad: gp, index: i, hasHaptics: false };
+      }
+    }
     return null;
   }
 
-  function setStatus(found){
-    if (!found){ ui.gpName.textContent='No controller detected.'; ui.cap.textContent='Pair, press any button, then press B.'; ui.dot.className='dot'; return; }
-    ui.gpName.textContent = (found.gp.id || 'Gamepad') + (found.gp.mapping!=='standard' ? ' (non-std)' : '');
-    ui.cap.textContent = found.haptics ? 'Haptics available.' : 'Connected (no haptics actuator found).';
-    ui.dot.className = 'dot ' + (found.haptics ? 'ok' : 'bad');
-  }
-  function refresh(){ setStatus(findPad()); }
-
-  // ---------- UI sync ----------
-  function syncIntensity(){
-    S.intensity = Number(ui.intensity.value)/100;
-    ui.intensityPct.textContent = Math.round(S.intensity*100);
-  }
-  function syncSpeed(){
-    S.speedPos = Number(ui.speed.value);
-    const hz = posToHz(S.speedPos);
-    if (hz === Infinity){
-      ui.speedHz.textContent = '∞';
-      ui.periodMs.textContent = '0.0';
+  function updateStatus() {
+    const found = findController();
+    
+    if (!found) {
+      elements.statusDot.className = 'status-dot';
+      elements.statusText.textContent = 'Connect controller and press any button';
+    } else if (found.hasHaptics) {
+      elements.statusDot.className = 'status-dot connected';
+      elements.statusText.textContent = 'Controller connected - haptics ready';
     } else {
-      ui.speedHz.textContent = hz.toFixed(1);
-      ui.periodMs.textContent = hz<=0 ? '∞' : (1000/hz).toFixed(1);
+      elements.statusDot.className = 'status-dot no-haptics';
+      elements.statusText.textContent = 'Controller connected - no haptics';
     }
   }
-  ui.intensity.addEventListener('input', syncIntensity);
-  ui.speed.addEventListener('input', syncSpeed);
-  syncIntensity(); syncSpeed();
 
-  // ---------- Robust button/D-pad reads ----------
-  function readButtons(gp){
-    const bArr = gp.buttons || [];
-    const pressed = bArr.map(x => (!!x?.pressed) || ((x?.value ?? 0) > 0.5));
-
-    // Some browsers/controllers map D-pad to axes (hat) or left stick.
-    const axes = gp.axes || [];
-    // Hat axis (Firefox/DS): axes[9] => [-1..1] pairs; Xbox often has 2 axes for dpad too.
-    let dpadUp=false, dpadDown=false, dpadLeft=false, dpadRight=false;
-
-    // Standard buttons
-    dpadUp   = pressed[12] || dpadUp;
-    dpadDown = pressed[13] || dpadDown;
-    dpadLeft = pressed[14] || dpadLeft;
-    dpadRight= pressed[15] || dpadRight;
-
-    // Axes interpretation fallback
-    const axX = axes[9] !== undefined ? axes[9] : axes[0]; // try hat then left stick X
-    const axY = axes[9] !== undefined ? axes[10] : axes[1]; // try hat then left stick Y
-    const thr = 0.5;
-    if (axX !== undefined && axY !== undefined && axes.length >= 2 && axes.length <= 16){
-      dpadLeft  = dpadLeft  || axX < -thr;
-      dpadRight = dpadRight || axX >  thr;
-      dpadUp    = dpadUp    || axY < -thr;
-      dpadDown  = dpadDown  || axY >  thr;
+  function updateDisplay() {
+    elements.intensityValue.textContent = state.intensity;
+    
+    const hz = posToHz(state.frequency);
+    if (hz === Infinity) {
+      elements.frequencyValue.textContent = '∞';
+      elements.frequencyUnit.textContent = 'constant';
+    } else {
+      elements.frequencyValue.textContent = hz.toFixed(1);
+      elements.frequencyUnit.textContent = 'Hz';
     }
+  }
 
+  function readButtons(gp) {
+    if (!gp || !gp.buttons) return null;
+    
+    const buttons = gp.buttons;
     return {
-      A: pressed[0] || false,
-      B: pressed[1] || false,
-      Y: pressed[3] || false,
-      START: pressed[9] || false,
-      BACK: pressed[8] || false,
-      DPAD_UP: dpadUp, DPAD_DOWN: dpadDown, DPAD_LEFT: dpadLeft, DPAD_RIGHT: dpadRight,
-      raw: pressed
+      B: buttons[1]?.pressed || false,
+      DPAD_UP: buttons[12]?.pressed || false,
+      DPAD_DOWN: buttons[13]?.pressed || false,
+      DPAD_LEFT: buttons[14]?.pressed || false,
+      DPAD_RIGHT: buttons[15]?.pressed || false
     };
   }
 
-  // ---------- Haptics driver (sine AM) ----------
-  function sendRumble(strong, weak, durationMs){
-    const gp = pads()[S.idx];
+  function sendHaptics(intensity, duration) {
+    const pads = getGamepads();
+    const gp = pads[state.controllerIndex];
     if (!gp?.vibrationActuator) return;
+    
+    const strength = intensity / 100;
     gp.vibrationActuator.playEffect('dual-rumble', {
       startDelay: 0,
-      duration: Math.max(20, Math.floor(durationMs)),
-      strongMagnitude: Math.max(0, Math.min(1, strong)),
-      weakMagnitude:   Math.max(0, Math.min(1, weak))
-    }).catch(()=>{});
+      duration: Math.max(20, duration),
+      strongMagnitude: strength,
+      weakMagnitude: strength
+    }).catch(() => {});
   }
-  function stopRumble(){
-    const gp = pads()[S.idx];
+
+  function stopHaptics() {
+    const pads = getGamepads();
+    const gp = pads[state.controllerIndex];
     if (!gp?.vibrationActuator) return;
-    if (typeof gp.vibrationActuator.reset === 'function'){
-      gp.vibrationActuator.reset().catch(()=>{});
+    
+    if (typeof gp.vibrationActuator.reset === 'function') {
+      gp.vibrationActuator.reset().catch(() => {});
     } else {
-      sendRumble(0,0,40);
+      sendHaptics(0, 50);
     }
   }
 
-  // rAF loop with continuous overlapping effects for smoothness
-  function loop(tMs){
-    if (!S.running){ S.rafId = null; return; }
-    const P = pads(); const gp = (S.idx!=null ? P[S.idx] : null);
-    if (!gp || !gp.connected || !gp.vibrationActuator){ toggle(false); refresh(); return; }
-
-    const hz = posToHz(S.speedPos);
-    const base = S.intensity;
-    // Sine modulation: 0..1 scaled; add small floor to avoid “dead spots”
-    const t = tMs/1000;
-    let amp;
-    if (hz === Infinity){
-      amp = base; // constant on
-    } else if (hz <= 0){
-      amp = 0;    // constant off
+  function hapticsLoop(timestamp) {
+    if (!state.isRunning) {
+      state.animationId = null;
+      return;
+    }
+    
+    const pads = getGamepads();
+    const gp = pads[state.controllerIndex];
+    if (!gp?.connected || !gp.vibrationActuator) {
+      stop();
+      updateStatus();
+      return;
+    }
+    
+    const hz = posToHz(state.frequency);
+    const time = timestamp / 1000;
+    let amplitude;
+    
+    if (hz === Infinity) {
+      amplitude = state.intensity;
+    } else if (hz <= 0) {
+      amplitude = 0;
     } else {
-      const m = 0.5 + 0.5 * Math.sin(2*Math.PI*hz*t);
-      const floor = 0.06; // helps keep it feeling continuous at mid speeds
-      amp = base * Math.max(floor, m);
+      const sine = 0.5 + 0.5 * Math.sin(2 * Math.PI * hz * time);
+      amplitude = state.intensity * Math.max(0.1, sine);
     }
+    
+    sendHaptics(amplitude, 25);
+    state.animationId = requestAnimationFrame(hapticsLoop);
+  }
 
-    // Send at a fixed cadence with overlap so it feels continuous
-    if (tMs - S.lastSend >= S.sendEveryMs){
-      // use same amp on both motors (you can bias if you want)
-      sendRumble(amp, amp, S.sendEveryMs + 18);
-      S.lastSend = tMs;
+  function start() {
+    const found = findController();
+    if (!found || !found.hasHaptics) {
+      updateStatus();
+      alert('No controller with haptics found');
+      return;
     }
-
-    S.rafId = requestAnimationFrame(loop);
+    
+    state.controllerIndex = found.index;
+    state.isRunning = true;
+    elements.container.classList.add('running');
+    
+    if (!state.animationId) {
+      state.animationId = requestAnimationFrame(hapticsLoop);
+    }
   }
 
-  // ---------- Start/Stop/Toggle ----------
-  function start(){
-    const found = findPad();
-    if (!found || !found.haptics){ refresh(); alert('No gamepad with haptics found. Press any button, then Detect.'); return; }
-    S.idx = found.index;
-    if (S.running) return;
-    S.running = true;
-    S.lastSend = 0;
-    if (!S.rafId) S.rafId = requestAnimationFrame(loop);
-  }
-  function stop(){
-    if (!S.running) return;
-    S.running = false;
-    if (S.rafId){ cancelAnimationFrame(S.rafId); S.rafId = null; }
-    stopRumble();
-  }
-  function toggle(force){
-    if (typeof force === 'boolean'){ force ? start() : stop(); return; }
-    S.running ? stop() : start();
+  function stop() {
+    state.isRunning = false;
+    elements.container.classList.remove('running');
+    
+    if (state.animationId) {
+      cancelAnimationFrame(state.animationId);
+      state.animationId = null;
+    }
+    
+    stopHaptics();
   }
 
-  // ---------- Controller & keyboard handling ----------
-  function pollInputs(){
-    const found = findPad();
-    const P = pads();
-    const gp = found ? found.gp : null;
+  function toggle() {
+    state.isRunning ? stop() : start();
+  }
 
-    if (!gp){ setStatus(null); S.lastButtons = []; return; }
-    setStatus(found);
-
-    const b = readButtons(gp);
-    const prev = S.lastButtons;
-
-    // B toggle (edge)
-    if (b.B && !(prev[1] || false)) toggle();
-
-    // Start/Back optional
-    if (b.START && !(prev[9] || false)) start();
-    if (b.BACK  && !(prev[8] || false)) stop();
-
-    // Continuous adjust (also allow keyboard)
+  function pollController() {
+    const found = findController();
+    if (!found) {
+      updateStatus();
+      state.lastButtons = null;
+      elements.debug.textContent = 'No controller';
+      return;
+    }
+    
+    updateStatus();
+    
+    const buttons = readButtons(found.gamepad);
+    if (!buttons) return;
+    
+    const prev = state.lastButtons;
+    
+    // B button toggle (only on press, not hold)
+    if (buttons.B && !(prev?.B)) {
+      toggle();
+    }
+    
+    // D-pad controls (continuous while held)
     const now = performance.now();
-    const dt = (pollInputs._lastTime ? (now - pollInputs._lastTime) : 16)/1000;
-    pollInputs._lastTime = now;
-
-    // Compute current Hz for non-linear step
-    const currHz = posToHz(S.speedPos);
-    const norm = (!isFinite(currHz) ? 1 : currHz / FMAX); // 0..1
-    const hzPerSec = 60*(1 - norm) + 3*(norm); // coarse at low, fine at high
-    let newHz = currHz;
-
-    const speedUp   = b.DPAD_UP || b.Y || S.keys.has('ArrowUp');
-    const speedDown = b.DPAD_DOWN || b.A || S.keys.has('ArrowDown');
-    if (speedUp && isFinite(newHz))   newHz = Math.min(FMAX, newHz + hzPerSec*dt);
-    if (speedDown){
-      newHz = isFinite(newHz) ? Math.max(0, newHz - hzPerSec*dt) : (FMAX - 10);
+    const dt = Math.min((now - state.lastInputTime) / 1000, 0.1); // cap at 100ms
+    state.lastInputTime = now;
+    
+    // Intensity: D-pad up/down
+    if (buttons.DPAD_UP) {
+      state.intensity = Math.min(100, state.intensity + 100 * dt);
+      updateDisplay();
     }
-    if (newHz !== currHz){
-      const pos = hzToPos(newHz);
-      if (pos !== S.speedPos){ ui.speed.value = pos; syncSpeed(); }
+    if (buttons.DPAD_DOWN) {
+      state.intensity = Math.max(0, state.intensity - 100 * dt);
+      updateDisplay();
     }
-
-    // Intensity adjust
-    const pctPerSec = 80;
-    let intPct = Number(ui.intensity.value);
-    const intUp   = b.DPAD_RIGHT || S.keys.has('ArrowRight');
-    const intDown = b.DPAD_LEFT  || S.keys.has('ArrowLeft');
-    if (intUp)   intPct = Math.min(100, intPct + pctPerSec*dt);
-    if (intDown) intPct = Math.max(0,   intPct - pctPerSec*dt);
-    if (intPct !== Number(ui.intensity.value)){ ui.intensity.value = Math.round(intPct); syncIntensity(); }
-
-    // Save raw for edge detection next poll
-    S.lastButtons = b.raw;
-
-    // Debug (optional)
-    ui.dbg.textContent = `speed: ${ui.speedHz.textContent} Hz  |  intensity: ${ui.intensityPct.textContent}%  |  running: ${S.running ? 'yes' : 'no'}`;
+    
+    // Frequency: D-pad left/right
+    if (buttons.DPAD_RIGHT) {
+      state.frequency = Math.min(101, state.frequency + 50 * dt);
+      updateDisplay();
+    }
+    if (buttons.DPAD_LEFT) {
+      state.frequency = Math.max(0, state.frequency - 50 * dt);
+      updateDisplay();
+    }
+    
+    state.lastButtons = buttons;
+    
+    elements.debug.textContent = 
+      `Intensity: ${state.intensity.toFixed(0)}% | ` +
+      `Frequency: ${elements.frequencyValue.textContent}${elements.frequencyUnit.textContent} | ` +
+      `${state.isRunning ? 'Running' : 'Stopped'}`;
   }
 
-  // Keyboard fallback
-  window.addEventListener('keydown', (e)=>{ if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) { e.preventDefault(); S.keys.add(e.key===' ' ? 'Space' : e.key); if (e.key===' ') toggle(); }});
-  window.addEventListener('keyup',   (e)=>{ if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) { e.preventDefault(); S.keys.delete(e.key===' ' ? 'Space' : e.key);} });
+  // Event listeners
+  elements.detectBtn.addEventListener('click', updateStatus);
+  elements.startBtn.addEventListener('click', start);
+  elements.stopBtn.addEventListener('click', stop);
 
-  // ---------- Wire UI ----------
-  ui.detect.addEventListener('click', refresh);
-  ui.start .addEventListener('click', start);
-  ui.stop  .addEventListener('click', stop);
-  ui.pulse .addEventListener('click', () => {
-    const found = findPad();
-    if (!found || !found.haptics){ refresh(); alert('No haptics actuator detected.'); return; }
-    const mag = S.intensity;
-    const gp = pads()[found.index];
-    gp.vibrationActuator.playEffect('dual-rumble', {startDelay:0, duration:220, strongMagnitude:mag, weakMagnitude:mag}).catch(()=>{});
+  window.addEventListener('gamepadconnected', updateStatus);
+  window.addEventListener('gamepaddisconnected', () => {
+    stop();
+    updateStatus();
   });
 
-  // ---------- Lifecycle ----------
-  window.addEventListener('gamepadconnected', refresh);
-  window.addEventListener('gamepaddisconnected', () => { stop(); refresh(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
-  window.addEventListener('pagehide', stop);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stop();
+  });
 
-  // Background input polling so B works even when idle
-  S.inputTimer = setInterval(pollInputs, 16);
-
-  // Init
-  refresh();
+  // Initialize
+  updateDisplay();
+  updateStatus();
+  
+  // Poll controller at 60fps
+  setInterval(pollController, 16);
 })();
 </script>
 </body>
