@@ -221,7 +221,8 @@
   <div class="instructions">
     Press <span class="key">B</span> to toggle • 
     <span class="key">D-pad ↑↓</span> intensity • 
-    <span class="key">D-pad ←→</span> frequency
+    <span class="key">D-pad ←→</span> frequency •
+    <span class="key">Y</span> power mode
   </div>
   
   <div class="debug" id="debug">Ready</div>
@@ -245,19 +246,28 @@
     controllerIndex: null,
     isRunning: false,
     animationId: null,
-    intensity: 50.0, // Start at middle
-    frequency: 15, // Start at a good middle frequency
+    intensity: 75.0, // Start higher for more power
+    frequency: 20, // Start at a good middle frequency
     lastButtons: null,
-    lastInputTime: 0
+    lastInputTime: 0,
+    powerMode: 'normal' // normal, boost, max
   };
 
-  // Much more intuitive frequency scaling
+  // More aggressive frequency scaling with wider range
   function posToHz(pos) {
     if (pos >= 100) return Infinity;
     if (pos <= 0) return 0;
     
-    // Linear scaling 0-20Hz for very noticeable differences
-    return (pos / 100) * 20;
+    // Exponential curve for more power at high end, precision at low end
+    const norm = pos / 100;
+    if (norm < 0.3) {
+      // Fine control for low frequencies (0-5Hz)
+      return norm * 16.67; // 0-5Hz in first 30%
+    } else {
+      // More aggressive scaling for higher frequencies (5-100Hz)
+      const highNorm = (norm - 0.3) / 0.7;
+      return 5 + Math.pow(highNorm, 1.5) * 95; // 5-100Hz in remaining 70%
+    }
   }
 
   function getGamepads() {
@@ -337,6 +347,7 @@
     const buttons = gp.buttons;
     return {
       B: buttons[1]?.pressed || false,
+      Y: buttons[3]?.pressed || false, // Add Y button for power modes
       DPAD_UP: buttons[12]?.pressed || false,
       DPAD_DOWN: buttons[13]?.pressed || false,
       DPAD_LEFT: buttons[14]?.pressed || false,
@@ -349,12 +360,22 @@
     const gp = pads[state.controllerIndex];
     if (!gp?.vibrationActuator) return;
     
-    const strength = intensity / 100;
+    // MAXIMUM POWER: Ensure we're using full range and boost intensity
+    let strength = intensity / 100;
+    
+    // Power boost modes for extra intensity
+    if (state.powerMode === 'boost') {
+      strength = Math.min(1.0, strength * 1.15); // 15% boost
+    } else if (state.powerMode === 'max') {
+      strength = 1.0; // Always maximum when in max mode
+    }
+    
+    // Use both strong and weak motors at full capacity
     gp.vibrationActuator.playEffect('dual-rumble', {
       startDelay: 0,
-      duration: Math.max(20, duration),
+      duration: Math.max(25, duration), // Longer duration for more impact
       strongMagnitude: strength,
-      weakMagnitude: strength
+      weakMagnitude: strength * 0.85 // Slightly different for richer feel
     }).catch(() => {});
   }
 
@@ -389,16 +410,23 @@
     let amplitude;
     
     if (hz === Infinity) {
-      amplitude = state.intensity;
+      amplitude = state.intensity; // Full constant power
     } else if (hz <= 0) {
       amplitude = 0;
     } else {
-      const sine = 0.5 + 0.5 * Math.sin(2 * Math.PI * hz * time);
-      const floor = 0.05; // Small floor to feel the rhythm
-      amplitude = state.intensity * Math.max(floor, sine);
+      // Enhanced sine wave with better contrast
+      const sine = Math.sin(2 * Math.PI * hz * time);
+      const normalizedSine = (sine + 1) / 2; // 0 to 1
+      
+      // More aggressive modulation for better feel
+      const floor = 0.02; // Very low floor for maximum contrast
+      const modulation = Math.max(floor, Math.pow(normalizedSine, 0.7)); // Slight curve for more punch
+      
+      amplitude = state.intensity * modulation;
     }
     
-    sendHaptics(amplitude, 30);
+    // Send haptics more frequently for smoother feel
+    sendHaptics(amplitude, 20);
     state.animationId = requestAnimationFrame(hapticsLoop);
   }
 
@@ -461,36 +489,50 @@
     if (buttons.B && !(prev?.B)) {
       toggle();
     }
-    
-    // D-pad controls (continuous while held)
+        
+    // ULTRA RESPONSIVE CONTROLS with power scaling
     const now = performance.now();
-    const dt = Math.min((now - state.lastInputTime) / 1000, 0.1); // cap at 100ms
+    const dt = Math.min((now - state.lastInputTime) / 1000, 0.05); // Cap for stability
     state.lastInputTime = now;
     
-    // Much more responsive and intuitive controls
-    // Intensity: D-pad up/down - quick changes that you can feel immediately
+    // Intensity: D-pad up/down - MUCH more responsive with acceleration
+    const intensityHeld = buttons.DPAD_UP || buttons.DPAD_DOWN;
+    const intensitySpeed = intensityHeld ? 200 : 120; // Faster when actively adjusting
+    
     if (buttons.DPAD_UP) {
-      state.intensity = Math.min(100, state.intensity + 150 * dt); // Very responsive
+      state.intensity = Math.min(100, state.intensity + intensitySpeed * dt);
       updateDisplay();
     }
     if (buttons.DPAD_DOWN) {
-      state.intensity = Math.max(0, state.intensity - 150 * dt);
+      state.intensity = Math.max(0, state.intensity - intensitySpeed * dt);
       updateDisplay();
     }
     
-    // Frequency: D-pad left/right - each step should feel very different
+    // Frequency: D-pad left/right - Precision at low end, speed at high end
+    const currentHz = posToHz(state.frequency);
+    const freqSpeed = currentHz < 10 ? 15 : 35; // Slower for precision, faster for power
+    
     if (buttons.DPAD_RIGHT) {
-      state.frequency = Math.min(100, state.frequency + 25 * dt); // Moderate speed for control
+      state.frequency = Math.min(100, state.frequency + freqSpeed * dt);
       updateDisplay();
     }
     if (buttons.DPAD_LEFT) {
-      state.frequency = Math.max(0, state.frequency - 25 * dt);
+      state.frequency = Math.max(0, state.frequency - freqSpeed * dt);
+      updateDisplay();
+    }
+    
+    // Cycle power modes with Y button (if available)
+    if (buttons.Y && !(prev?.Y)) {
+      if (state.powerMode === 'normal') state.powerMode = 'boost';
+      else if (state.powerMode === 'boost') state.powerMode = 'max';
+      else state.powerMode = 'normal';
       updateDisplay();
     }
     
     state.lastButtons = buttons;
     
     elements.debug.textContent = 
+      `Power: ${state.powerMode.toUpperCase()} | ` +
       `Intensity: ${state.intensity.toFixed(1)}% | ` +
       `Frequency: ${elements.frequencyValue.textContent}${elements.frequencyUnit.textContent} | ` +
       `${state.isRunning ? 'Running' : 'Stopped'}`;
