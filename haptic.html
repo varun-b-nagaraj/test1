@@ -13,8 +13,8 @@
   
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    background: #fafafa;
-    color: #333;
+    background: #1a1a1a;
+    color: #e0e0e0;
     height: 100vh;
     display: flex;
     align-items: center;
@@ -23,12 +23,13 @@
   }
   
   .container {
-    background: white;
+    background: #2a2a2a;
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     padding: 40px;
     width: 500px;
     max-width: 90vw;
+    border: 1px solid #3a3a3a;
   }
   
   .title {
@@ -36,7 +37,7 @@
     font-size: 24px;
     font-weight: 600;
     margin-bottom: 30px;
-    color: #222;
+    color: #f0f0f0;
   }
   
   .status {
@@ -45,7 +46,7 @@
     gap: 12px;
     margin-bottom: 30px;
     padding: 16px;
-    background: #f8f9fa;
+    background: #333;
     border-radius: 8px;
   }
   
@@ -53,7 +54,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #ddd;
+    background: #555;
     transition: all 0.3s ease;
   }
   
@@ -62,7 +63,7 @@
   
   .status-text {
     font-size: 14px;
-    color: #666;
+    color: #ccc;
   }
   
   .controls {
@@ -78,7 +79,7 @@
   
   .control-label {
     font-size: 14px;
-    color: #666;
+    color: #aaa;
     margin-bottom: 8px;
     font-weight: 500;
   }
@@ -86,37 +87,38 @@
   .control-value {
     font-size: 32px;
     font-weight: 700;
-    color: #222;
+    color: #f0f0f0;
     margin-bottom: 4px;
   }
   
   .control-unit {
     font-size: 12px;
-    color: #999;
+    color: #888;
     margin-bottom: 16px;
   }
   
   .control-hint {
     font-size: 11px;
-    color: #999;
+    color: #888;
     padding: 4px 8px;
-    background: #f1f3f4;
+    background: #333;
     border-radius: 4px;
     display: inline-block;
   }
   
   .buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    display: flex;
+    justify-content: center;
     gap: 12px;
     margin-bottom: 20px;
   }
   
   .btn {
-    padding: 12px 16px;
-    border: 1px solid #ddd;
+    padding: 12px 20px;
+    border: 1px solid #444;
     border-radius: 6px;
-    background: white;
+    background: #333;
+    color: #e0e0e0;
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
@@ -124,8 +126,8 @@
   }
   
   .btn:hover {
-    background: #f8f9fa;
-    border-color: #ccc;
+    background: #3a3a3a;
+    border-color: #555;
   }
   
   .btn:active {
@@ -156,17 +158,18 @@
   
   .instructions {
     font-size: 12px;
-    color: #666;
+    color: #aaa;
     text-align: center;
     line-height: 1.4;
   }
   
   .key {
-    background: #f1f3f4;
+    background: #444;
     padding: 2px 6px;
     border-radius: 3px;
     font-weight: 600;
     font-size: 11px;
+    color: #ccc;
   }
   
   .running {
@@ -176,11 +179,11 @@
   .debug {
     margin-top: 16px;
     padding: 8px;
-    background: #f8f9fa;
+    background: #333;
     border-radius: 4px;
     font-family: monospace;
     font-size: 11px;
-    color: #666;
+    color: #aaa;
     text-align: center;
   }
 </style>
@@ -212,8 +215,7 @@
   
   <div class="buttons">
     <button class="btn" id="detectBtn">Detect</button>
-    <button class="btn btn-primary" id="startBtn">Start</button>
-    <button class="btn btn-danger" id="stopBtn">Stop</button>
+    <button class="btn btn-primary" id="toggleBtn">Start</button>
   </div>
   
   <div class="instructions">
@@ -235,8 +237,7 @@
     frequencyValue: document.getElementById('frequencyValue'),
     frequencyUnit: document.getElementById('frequencyUnit'),
     detectBtn: document.getElementById('detectBtn'),
-    startBtn: document.getElementById('startBtn'),
-    stopBtn: document.getElementById('stopBtn'),
+    toggleBtn: document.getElementById('toggleBtn'),
     debug: document.getElementById('debug')
   };
 
@@ -244,17 +245,19 @@
     controllerIndex: null,
     isRunning: false,
     animationId: null,
-    intensity: 60, // 0-100
-    frequency: 25, // 0-101 position
+    intensity: 50.0, // Start at middle
+    frequency: 15, // Start at a good middle frequency
     lastButtons: null,
     lastInputTime: 0
   };
 
-  // Frequency conversion
+  // Much more intuitive frequency scaling
   function posToHz(pos) {
-    if (pos >= 101) return Infinity;
-    const norm = pos / 101;
-    return 200 * (1 - Math.pow(1 - norm, 3));
+    if (pos >= 100) return Infinity;
+    if (pos <= 0) return 0;
+    
+    // Linear scaling 0-20Hz for very noticeable differences
+    return (pos / 100) * 20;
   }
 
   function getGamepads() {
@@ -304,15 +307,27 @@
   }
 
   function updateDisplay() {
-    elements.intensityValue.textContent = state.intensity;
+    elements.intensityValue.textContent = state.intensity.toFixed(1);
     
     const hz = posToHz(state.frequency);
     if (hz === Infinity) {
       elements.frequencyValue.textContent = '∞';
       elements.frequencyUnit.textContent = 'constant';
+    } else if (hz === 0) {
+      elements.frequencyValue.textContent = '0';
+      elements.frequencyUnit.textContent = 'off';
     } else {
       elements.frequencyValue.textContent = hz.toFixed(1);
       elements.frequencyUnit.textContent = 'Hz';
+    }
+    
+    // Update button text and style
+    if (state.isRunning) {
+      elements.toggleBtn.textContent = 'Stop';
+      elements.toggleBtn.className = 'btn btn-danger';
+    } else {
+      elements.toggleBtn.textContent = 'Start';
+      elements.toggleBtn.className = 'btn btn-primary';
     }
   }
 
@@ -379,10 +394,11 @@
       amplitude = 0;
     } else {
       const sine = 0.5 + 0.5 * Math.sin(2 * Math.PI * hz * time);
-      amplitude = state.intensity * Math.max(0.1, sine);
+      const floor = 0.05; // Small floor to feel the rhythm
+      amplitude = state.intensity * Math.max(floor, sine);
     }
     
-    sendHaptics(amplitude, 25);
+    sendHaptics(amplitude, 30);
     state.animationId = requestAnimationFrame(hapticsLoop);
   }
 
@@ -397,6 +413,7 @@
     state.controllerIndex = found.index;
     state.isRunning = true;
     elements.container.classList.add('running');
+    updateDisplay();
     
     if (!state.animationId) {
       state.animationId = requestAnimationFrame(hapticsLoop);
@@ -406,6 +423,7 @@
   function stop() {
     state.isRunning = false;
     elements.container.classList.remove('running');
+    updateDisplay();
     
     if (state.animationId) {
       cancelAnimationFrame(state.animationId);
@@ -416,7 +434,11 @@
   }
 
   function toggle() {
-    state.isRunning ? stop() : start();
+    if (state.isRunning) {
+      stop();
+    } else {
+      start();
+    }
   }
 
   function pollController() {
@@ -445,38 +467,38 @@
     const dt = Math.min((now - state.lastInputTime) / 1000, 0.1); // cap at 100ms
     state.lastInputTime = now;
     
-    // Intensity: D-pad up/down
+    // Much more responsive and intuitive controls
+    // Intensity: D-pad up/down - quick changes that you can feel immediately
     if (buttons.DPAD_UP) {
-      state.intensity = Math.min(100, state.intensity + 100 * dt);
+      state.intensity = Math.min(100, state.intensity + 150 * dt); // Very responsive
       updateDisplay();
     }
     if (buttons.DPAD_DOWN) {
-      state.intensity = Math.max(0, state.intensity - 100 * dt);
+      state.intensity = Math.max(0, state.intensity - 150 * dt);
       updateDisplay();
     }
     
-    // Frequency: D-pad left/right
+    // Frequency: D-pad left/right - each step should feel very different
     if (buttons.DPAD_RIGHT) {
-      state.frequency = Math.min(101, state.frequency + 50 * dt);
+      state.frequency = Math.min(100, state.frequency + 25 * dt); // Moderate speed for control
       updateDisplay();
     }
     if (buttons.DPAD_LEFT) {
-      state.frequency = Math.max(0, state.frequency - 50 * dt);
+      state.frequency = Math.max(0, state.frequency - 25 * dt);
       updateDisplay();
     }
     
     state.lastButtons = buttons;
     
     elements.debug.textContent = 
-      `Intensity: ${state.intensity.toFixed(0)}% | ` +
+      `Intensity: ${state.intensity.toFixed(1)}% | ` +
       `Frequency: ${elements.frequencyValue.textContent}${elements.frequencyUnit.textContent} | ` +
       `${state.isRunning ? 'Running' : 'Stopped'}`;
   }
 
   // Event listeners
   elements.detectBtn.addEventListener('click', updateStatus);
-  elements.startBtn.addEventListener('click', start);
-  elements.stopBtn.addEventListener('click', stop);
+  elements.toggleBtn.addEventListener('click', toggle);
 
   window.addEventListener('gamepadconnected', updateStatus);
   window.addEventListener('gamepaddisconnected', () => {
